@@ -40,8 +40,9 @@ class ApiService {
           // Check if the match is in the future AND hasn't started yet
           final isFuture = matchTime.isAfter(now);
           final isScheduled = match['status'] == 'SCHEDULED' || match['status'] == 'TIMED';
+          final isLive = match['status'] == 'IN_PLAY' || match['status'] == 'LIVE';
           
-          return isFuture && isScheduled;
+          return isFuture || isScheduled || isLive;
         }).map((m) => m as Map<String, dynamic>).toList();
 
         return futureMatches;

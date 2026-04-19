@@ -12,6 +12,7 @@ class Bet {
   final String selection;
   final int amount;
   final DateTime time;
+  final double payoutMultiplier;
   bool isResolved;
   bool? isWon;
   String? finalScore;
@@ -26,6 +27,7 @@ class Bet {
     this.isResolved = false,
     this.isWon,
     this.finalScore,
+    this.payoutMultiplier = 2.0,
   });
 
   // Convert Firestore JSON into a Bet object
@@ -164,7 +166,7 @@ class CurrencyManager extends ChangeNotifier {
   }
 
   // 3. Place Bet in Firestore
-  Future<bool> placeBet(int amount, int matchId, String match, String selection) async {
+  Future<bool> placeBet(int amount, int matchId, String match, String selection, {double multiplier = 2.0}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || _balance < amount) return false;
 
@@ -180,6 +182,7 @@ class CurrencyManager extends ChangeNotifier {
         match: match,
         selection: selection,
         amount: amount,
+        payoutMultiplier: multiplier,
         time: DateTime.now(),
       );
 
@@ -232,8 +235,10 @@ class CurrencyManager extends ChangeNotifier {
           
           // Step B: If won, give them their payout!
           if (isWin) {
+            int winnings = (bet.amount * bet.payoutMultiplier).floor();
+
             await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-              'balance': FieldValue.increment(bet.amount * 2),
+              'balance': FieldValue.increment(winnings),
               'totalWins': FieldValue.increment(1),
             });
           }

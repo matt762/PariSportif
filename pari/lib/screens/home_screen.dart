@@ -99,9 +99,10 @@ itemBuilder: (context, index) {
                             context,
                             MaterialPageRoute(
                               builder: (context) => BettingScreen(
-                                matchId: matchId,
-                                homeTeam: homeTeam,
-                                awayTeam: awayTeam,
+                                matchId: match['id'],
+                                homeTeam: match['homeTeam']['name'],
+                                awayTeam: match['awayTeam']['name'],
+                                status: match['status'], // <--- ADD THIS LINE
                               ),
                             ),
                           );

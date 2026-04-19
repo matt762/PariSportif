@@ -6,43 +6,61 @@ class BettingScreen extends StatelessWidget {
   final int matchId;
   final String homeTeam;
   final String awayTeam;
+  final String status; // NEW: To detect if match is LIVE
 
   const BettingScreen({
     super.key, 
     required this.matchId,
     required this.homeTeam,
     required this.awayTeam,
+    required this.status, // Pass this from HomeScreen
   });
 
   @override
   Widget build(BuildContext context) {
     final matchTitle = '$homeTeam vs $awayTeam';
+    
+    // Logic for Reduced Odds (Live vs Pre-match)
+    final bool isLive = status == 'IN_PLAY' || status == 'LIVE';
+    final double multiplier = isLive ? 1.4 : 2.0;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(matchTitle),
-        backgroundColor: Colors.red,
+        title: Text(isLive ? '🔴 LIVE Betting' : 'Upcoming Match'),
+        backgroundColor: isLive ? Colors.red.shade900 : Colors.red,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children:[
-            // Match header
+          children: [
+            // Match header with Odds badge
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  children:[
+                  children: [
+                    if (isLive)
+                      const Badge(
+                        label: Text('LIVE'),
+                        backgroundColor: Colors.red,
+                      ),
                     Text(
                       matchTitle,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Place your virtual bet',
-                      style: TextStyle(color: Colors.grey.shade600),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Current Odds: x$multiplier',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                      ),
                     ),
                   ],
                 ),
@@ -50,7 +68,7 @@ class BettingScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Current balance display
+            // Current balance
             Consumer<CurrencyManager>(
               builder: (context, currencyManager, child) {
                 return Card(
@@ -59,7 +77,7 @@ class BettingScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children:[
+                      children: [
                         const Text('Your balance:', style: TextStyle(fontWeight: FontWeight.bold)),
                         Text(
                           '${currencyManager.balance} coins',
@@ -77,57 +95,58 @@ class BettingScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Bet options
             const Text(
-              'Pick your bet:',
+              'Select your result:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
-            // Home win bet (50 coins) -> Notice we pass 4 arguments and include "(Home)"
+            // Home win bet
             _buildBetButton(
               context,
-              '$homeTeam wins (50 coins)',
-              () {
-                Provider.of<CurrencyManager>(context, listen: false)
-                    .placeBet(50, matchId, matchTitle, '$homeTeam wins (Home)');
-                Navigator.pop(context);
+              '$homeTeam wins',
+              50,
+              multiplier,
+              () async {
+                final success = await Provider.of<CurrencyManager>(context, listen: false)
+                    .placeBet(50, matchId, matchTitle, '$homeTeam wins (Home)', multiplier: multiplier);
+                if (success && context.mounted) Navigator.pop(context);
               },
             ),
             const SizedBox(height: 12),
 
-            // Draw bet (100 coins)
+            // Draw bet
             _buildBetButton(
               context,
-              'Draw (100 coins)',
-              () {
-                Provider.of<CurrencyManager>(context, listen: false)
-                    .placeBet(100, matchId, matchTitle, 'Draw');
-                Navigator.pop(context);
+              'Draw',
+              100,
+              multiplier,
+              () async {
+                final success = await Provider.of<CurrencyManager>(context, listen: false)
+                    .placeBet(100, matchId, matchTitle, 'Draw', multiplier: multiplier);
+                if (success && context.mounted) Navigator.pop(context);
               },
             ),
             const SizedBox(height: 12),
 
-            // Away win bet (50 coins) -> Notice we pass 4 arguments and include "(Away)"
+            // Away win bet
             _buildBetButton(
               context,
-              '$awayTeam wins (50 coins)',
-              () {
-                Provider.of<CurrencyManager>(context, listen: false)
-                    .placeBet(50, matchId, matchTitle, '$awayTeam wins (Away)');
-                Navigator.pop(context);
+              '$awayTeam wins',
+              50,
+              multiplier,
+              () async {
+                final success = await Provider.of<CurrencyManager>(context, listen: false)
+                    .placeBet(50, matchId, matchTitle, '$awayTeam wins (Away)', multiplier: multiplier);
+                if (success && context.mounted) Navigator.pop(context);
               },
             ),
 
             const Spacer(),
 
-            // Confirmation text
             Text(
-              'Virtual currency only - no real money',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
-              ),
+              'Live matches have reduced odds (x1.4) due to lower risk.',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],
@@ -136,16 +155,24 @@ class BettingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBetButton(BuildContext context, String label, VoidCallback onPressed) {
+  Widget _buildBetButton(BuildContext context, String label, int amount, double multiplier, VoidCallback onPressed) {
+    int potentialWin = (amount * multiplier).floor();
+
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         backgroundColor: Colors.redAccent.shade200,
         foregroundColor: Colors.white,
       ),
       onPressed: onPressed,
-      child: Text(label, style: const TextStyle(fontSize: 16)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('$label ($amount coins)', style: const TextStyle(fontSize: 16)),
+          Text('Win: $potentialWin', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 }
