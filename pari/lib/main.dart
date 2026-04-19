@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Make sure this is imported
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart'; // 1. Import Firebase
+import 'firebase_options.dart'; // 2. Import the generated options
 
 import 'screens/main_layout.dart';
 import 'services/currency_manager.dart';
+import 'screens/auth_wrapper.dart';
 
-// The single, asynchronous main function
 Future<void> main() async {
-  // 1. Ensure Flutter bindings are initialized before loading dotenv
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 2. Load the environment variables from the .env file
   await dotenv.load(fileName: ".env");
   
-  // 3. Run your actual app class
+  // 3. Initialize Firebase before running the app
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
   runApp(const FriendlyBetsApp());
 }
 
@@ -31,7 +35,9 @@ class FriendlyBetsApp extends StatelessWidget {
           primarySwatch: Colors.red, 
           useMaterial3: true,
         ),
-        home: const MainLayout(),
+        // For now, we will still load MainLayout. 
+        // We will change this to LoginScreen next!
+        home: const AuthWrapper(),
       ),
     );
   }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "583924063249",
+    "project_id": "parisportif-b983c",
+    "storage_bucket": "parisportif-b983c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:583924063249:android:f1c5139ab65f18166365b0",
+        "android_client_info": {
+          "package_name": "com.example.pari"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFgmJ_g3H3eW6-1gSh_2wSnOmTnFzz4ko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
