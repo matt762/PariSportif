@@ -5,7 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart'; // 1. Import dotenv
 class ApiService {
   // 2. Fetch the API key securely from the .env file.
   // Using a getter ensures it reads the loaded environment variables.
-  static String get _apiKey => dotenv.env['FOOTBALL_DATA_API_KEY'] ?? 'KEY_NOT_FOUND'; 
+  static String get _apiKey => dotenv.env['API_FOOTBALL_KEY'] ?? 'KEY_NOT_FOUND'; 
   
   static const String _baseUrl = 'https://api.football-data.org/v4';
 
@@ -47,7 +47,8 @@ class ApiService {
         return futureMatches;
       } else {
         print('API Error: ${response.statusCode}'); 
-        return[];
+        print('Error Details: ${response.body}'); // <-- Add this line!
+        return [];
       }
     } catch (e) {
       print('Network Error: $e');
