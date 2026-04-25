@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart'; // 1. Import Firebase
 import 'firebase_options.dart'; // 2. Import the generated options
 
@@ -10,9 +9,7 @@ import 'screens/auth_wrapper.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await dotenv.load(fileName: ".env");
-  
+    
   // 3. Initialize Firebase before running the app
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

@@ -1,88 +1,94 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // 1. Import dotenv
 
 class ApiService {
-  // 2. Fetch the API key securely from the .env file.
-  // Using a getter ensures it reads the loaded environment variables.
-  static String get _apiKey => dotenv.env['API_FOOTBALL_KEY'] ?? 'KEY_NOT_FOUND'; 
-  
-  static const String _baseUrl = 'https://api.football-data.org/v4';
+  // Replace this with your actual Vercel Proxy URL!
+  static const String _proxyUrl = 'https://football-proxy-9147timzb-jean-michels-projects-8b37d3ce.vercel.app/api/proxy';
 
-  // Fetch upcoming matches (Today + Next 3 Days)
+  static const Map<String, String> _headers = {
+    'Content-Type': 'application/json',
+  };
+
+  // Helper method to build the proxy URL dynamically
+  static Uri _buildUrl(String endpoint) {
+    return Uri.parse('$_proxyUrl?endpoint=$endpoint');
+  }
+
+  // -------------------------------------------------------------------------
+  // 1. Fetch all upcoming matches (FIXED RETURN TYPE)
+  // -------------------------------------------------------------------------
   Future<List<Map<String, dynamic>>> fetchUpcomingMatches() async {
-    try {
-      // 1. Calculate dates to get a good batch of games
-      final now = DateTime.now();
-      final inThreeDays = now.add(const Duration(days: 3));
-      
-      // Format dates to YYYY-MM-DD for the API
-      final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      final endStr = "${inThreeDays.year}-${inThreeDays.month.toString().padLeft(2, '0')}-${inThreeDays.day.toString().padLeft(2, '0')}";
+    final url = _buildUrl('/v4/matches');
 
-      final response = await http.get(
-        // 2. Add the date parameters to the URL
-        Uri.parse('$_baseUrl/matches?dateFrom=$todayStr&dateTo=$endStr'),
-        headers: {'X-Auth-Token': _apiKey}, // This now uses the secured key
-      );
+    try {
+      final response = await http.get(url, headers: _headers);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> matchesList = data['matches'];
         
-        // 3. Filter the list to ONLY keep future matches
-        final futureMatches = matchesList.where((m) {
-          final match = m as Map<String, dynamic>;
-          
-          // Convert the API's UTC match time to your local time
-          final matchTime = DateTime.parse(match['utcDate']).toLocal();
-          
-          // Check if the match is in the future AND hasn't started yet
-          final isFuture = matchTime.isAfter(now);
-          final isScheduled = match['status'] == 'SCHEDULED' || match['status'] == 'TIMED';
-          final isLive = match['status'] == 'IN_PLAY' || match['status'] == 'LIVE';
-          
-          return isFuture || isScheduled || isLive;
-        }).map((m) => m as Map<String, dynamic>).toList();
-
-        return futureMatches;
+        // Explicitly cast the dynamic list into a List of Maps
+        return List<Map<String, dynamic>>.from(data['matches'] ?? []);
       } else {
-        print('API Error: ${response.statusCode}'); 
-        print('Error Details: ${response.body}'); // <-- Add this line!
-        return [];
+        print('Error fetching matches: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to load upcoming matches');
       }
     } catch (e) {
-      print('Network Error: $e');
-      return[];
+      print('Connection Error: $e');
+      throw Exception('Connection failed: Please check your internet or proxy setup.');
     }
   }
 
-  // Fetch a single match result and score to resolve bets
-  Future<Map<String, String>?> fetchMatchResult(int matchId) async {
+  // -------------------------------------------------------------------------
+  // 2. Fetch specific match result 
+  // -------------------------------------------------------------------------
+  Future<Map<String, String>?> fetchMatchResult(dynamic matchId) async {
+    final url = _buildUrl('/v4/matches/$matchId');
+
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/matches/$matchId'),
-        headers: {'X-Auth-Token': _apiKey}, // This now uses the secured key
-      );
+      final response = await http.get(url, headers: _headers);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        if (data['status'] == 'FINISHED') {
-          // Grab the actual goals scored
-          final homeGoals = data['score']['fullTime']['home'];
-          final awayGoals = data['score']['fullTime']['away'];
-          
-          return {
-            'winner': data['score']['winner'], // 'HOME_TEAM', 'AWAY_TEAM', 'DRAW'
-            'score': '$homeGoals - $awayGoals', // e.g., "2 - 1"
-          };
-        }
+        // Extract the status (e.g., 'FINISHED', 'IN_PLAY', 'TIMED')
+        String status = data['status']?.toString() ?? 'UNKNOWN';
+        
+        // Extract the winner (e.g., 'HOME_TEAM', 'AWAY_TEAM', 'DRAW')
+        String winner = data['score']?['winner']?.toString() ?? 'PENDING';
+        
+        return {
+          'status': status,
+          'winner': winner,
+        };
+      } else {
+        print('Error fetching match result: ${response.statusCode}');
+        return null;
       }
-      return null;
     } catch (e) {
-      print('Result Error: $e');
+      print('Connection Error: $e');
       return null;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 3. Fetch specific competitions (FIXED RETURN TYPE)
+  // -------------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> fetchCompetitions() async {
+    final url = _buildUrl('/v4/competitions');
+
+    try {
+      final response = await http.get(url, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        // Explicitly cast the dynamic list into a List of Maps
+        return List<Map<String, dynamic>>.from(data['competitions'] ?? []);
+      } else {
+        throw Exception('Failed to load competitions');
+      }
+    } catch (e) {
+      throw Exception('Connection failed');
     }
   }
 }
